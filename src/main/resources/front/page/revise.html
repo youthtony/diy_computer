@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
+    <title>DIY电脑</title>
+    <link rel="shortcut icon" href="diy.png" type="image/x-icon">
+    <!--不同屏幕尺寸根字体设置-->
+    <script src="./../js/base.js"></script>
+    <!--element-ui的样式-->
+    <link rel="stylesheet" href="../../backend/plugins/element-ui/index.css" />
+    <!--引入vant样式-->
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <!-- 引入样式  -->
+    <link rel="stylesheet" href="../styles/index.css" />
+    <!--本页面内容的样式-->
+    <link rel="stylesheet" href="./../styles/revise.css" />
+</head>
+<body>
+<div id="revise" class="app">
+    <div class="divHead">
+        <div class="divTitle">
+            <i class="el-icon-arrow-left" @click="goBack"></i>修改资料
+        </div>
+    </div>
+    <div class="divContent">
+        <div class="divItem">
+            <span>姓名：</span>
+            <el-input placeholder=" 请填写用户名" v-model="form.name"  maxlength='10' class="inputUser"/></el-input>
+            <span class="spanChecked" @click="form.sex = '1'">
+                    <i :class="{iActive:form.sex === '1'}"></i>
+                    先生
+                   </span>
+            <span class="spanChecked" @click="form.sex = '0'">
+                    <i :class="{iActive:form.sex === '0'}"></i>
+                    女士
+                </span>
+        </div>
+        <div class="divItem">
+            <span>身份证号：</span>
+            <el-input placeholder=" 请填写用户身份证号码" v-model="form.idNumber"  maxlength='20' style="width: calc(100% - 80rem);"/></el-input>
+        </div>
+<!--        <div class="divItem">-->
+<!--            <span>头像：</span>-->
+<!--            <el-input placeholder=" 请输入收货地址" v-model="form.detail"  maxlength='140'/></el-input>-->
+<!--        </div>-->
+        <div class="divSave" @click="saveRevise">保存</div>
+    </div>
+</div>
+<!-- 开发环境版本,包含了有帮助的命令行警告 -->
+<script src="../../backend/plugins/vue/vue.js"></script>
+<!-- 引入组件库 -->
+<script src="../../backend/plugins/element-ui/index.js"></script>
+<!-- 引入vant样式 -->
+<script src="./../js/vant.min.js"></script>
+<script src="./../js/common.js"></script>
+<script src="./../api/revise.js"></script>
+<!-- 引入axios -->
+<script src="../../backend/plugins/axios/axios.min.js"></script>
+<script src="./../js/request.js"></script>
+<script>
+    new Vue({
+        el:"#revise",
+        data(){
+            return{
+                form:{
+                    name:'',//用户名
+                    idNumber:undefined,//身份证号
+                    sex:'1',//0表示女 1 表示男
+                    // detail:'',//收货地址
+                },
+                id:undefined,
+                activeIndex :0
+            }
+        },
+        computed:{},
+        created(){
+            this.initData()
+            const userMessage = window.localStorage.getItem('userMessage')
+            if (userMessage) {
+                this.userMessage = JSON.parse(userMessage)
+            }
+        },
+        mounted(){},
+        methods: {
+            goBack() {
+                history.go(-1)
+            },
+
+            async initData() {
+
+                const params = parseUrl(window.location.search)
+                this.id = params.id
+
+
+            },
+            async saveRevise(){
+                const form = this.form
+                if(!form.name){
+                    this.$notify({ type:'warning', message:'请输入用户'});
+                    return
+                }
+                if(!form.idNumber){
+                    this.$notify({ type:'warning', message:'请输入身份证号'});
+                    return
+                }
+                // if(!form.detail){
+                //     this.$notify({ type:'warning', message:'请输入收货地址'});
+                //     return
+                // }
+                const reg = /^([1-6][1-9]|50)\d{4}(18|19|20)\d{2}((0[1-9])|10|11|12)(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/
+                if(!reg.test(form.idNumber)){
+                    this.$notify({ type:'warning', message:'身份证号码不合法'});
+                    return
+                }
+                let res= {}
+                if(this.id){
+                    res = await updateReviseApi(this.form)
+                }
+
+                if(res.code === 1){
+                    localStorage.setItem('userMessage',JSON.stringify(res.data))
+                    window.requestAnimationFrame(()=>{
+                        window.location.replace('/front/index.html')
+                    })
+                }else{
+                    this.$notify({ type:'warning', message:'res.msg'});
+                }
+            },
+        }
+
+
+    })
+</script>
+</body>
+</html>

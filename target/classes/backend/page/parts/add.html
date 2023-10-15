@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+  <style>
+    .selectInput {
+      position: relative;
+      width: 100%;
+      min-width: 100px;
+    }
+    .selectInput .flavorSelect {
+      position: absolute;
+      width: 100%;
+      padding: 0 10px;
+      border-radius: 3px;
+      border: solid 1px #FF903D;
+      line-height: 30px;
+      text-align: center;
+      background: #fff;
+      top: 50px;
+      z-index: 99;
+    }
+    .selectInput .flavorSelect .items {
+      cursor: pointer;
+      display: inline-block;
+      width: 100%;
+      line-height: 35px;
+      border-bottom: solid 1px #f4f4f4;
+      color: #666;
+    }
+    .selectInput .flavorSelect .none {
+      font-size: 14px;
+    }
+
+    #food-add-app .uploadImg .el-form-item__label::before{
+          content: '*';
+          color: #F56C6C;
+          margin-right: 4px;
+      }
+
+  </style>
+</head>
+<body>
+   <div class="addBrand-container" id="part-add-app">
+    <div class="container">
+      <el-form
+        ref="ruleForm"
+        :model="ruleForm"
+        :rules="rules"
+        :inline="true"
+        label-width="180px"
+        class="demo-ruleForm"
+      >
+        <div>
+          <el-form-item label="零件名称:" prop="name">
+            <el-input
+              v-model="ruleForm.name"
+              placeholder="请填写零件名称"
+              maxlength="20"
+            />
+          </el-form-item>
+          <el-form-item label="零件分类:" prop="categoryId">
+            <el-select
+              v-model="ruleForm.categoryId"
+              placeholder="请选择零件分类"
+            >
+              <el-option v-for="(item,index) in partList" :key="index" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div>
+          <el-form-item label="零件价格:" prop="price">
+            <el-input v-model="ruleForm.price" placeholder="请设置零件价格"/>
+          </el-form-item>
+        </div>
+        <el-form-item label="服务配置:">
+          <el-form-item>
+            <div class="flavorBox">
+              <span v-if="partAfters.length == 0" class="addBut" @click="addAfter"> + 添加服务</span>
+              <div
+                v-if="partAfters.length != 0"
+                class="flavor"
+              >
+                <div class="title">
+                  <span>服务名（3个字内）</span><span>服务标签（输入标签回车添加）</span>
+                </div>
+                <div class="cont">
+                  <div
+                    v-for="(item, index) in partAfters"
+                    :key="index"
+                    class="items"
+                  >
+                    <div class="itTit">
+
+                      <div class="selectInput">
+                        <div>
+                           <el-input
+                              v-model="item.name"
+                              type="text"
+                              style="width: 100%"
+                              placeholder="请输入服务"
+                              @focus="selectAfter(true,index)"
+                              @blur="outSelect(false,index)"
+                              @input="inputHandle(index)"
+                            />
+                        </div>
+                        <div v-show="item.showOption" class="afterSelect">
+                          <span
+                            v-for="(it, ind) in partAftersData"
+                            :key="ind"
+                            class="items"
+                            @click="checkOption(it,ind,index)"
+                          >{{ it.name }}</span>
+                          <span
+                            v-if="partAftersData == []"
+                            class="none"
+                          >无数据</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="labItems"
+                      style="display: flex"
+                    >
+                      <span
+                        v-for="(it, ind) in item.value"
+                        :key="ind"
+                      >{{ it }} <i @click="delAfterLabel(index, ind)">X</i></span>
+                      <div
+                        class="inputBox"
+                        :style="inputStyle"
+                        contenteditable="true"
+                        @focus="afterPosition(index)"
+                        @keydown.enter="(val)=>keyDownHandle(val,index)"
+                      ></div>
+                    </div>
+                    <span
+                      class="delFlavor delBut non"
+                      @click="delAfter(index)"
+                    >删除</span>
+                  </div>
+                </div>
+                <div
+                  class="addBut"
+                  @click="addAfter"
+                >
+                  添加服务
+                </div>
+              </div>
+            </div>
+          </el-form-item>
+        </el-form-item>
+        <div>
+        </div>
+        <div>
+            <el-form-item label="零件图片:" prop="region" class="uploadImg">
+            <el-upload
+              class="avatar-uploader"
+              action="/common/upload"
+              :show-file-list="false"
+              :on-success="handleAvatarSuccess"
+              :on-change="onChange"
+              ref="upload"
+            >
+              <img
+                v-if="imageUrl"
+                :src="imageUrl"
+                class="avatar"
+              ></img>
+              <i
+                v-else
+                class="el-icon-plus avatar-uploader-icon"
+              ></i>
+            </el-upload>
+          </el-form-item>
+        </div>
+        <div class="address">
+          <el-form-item label="零件描述:" prop="region">
+            <el-input
+              v-model="ruleForm.description"
+              type="textarea"
+              :rows="3"
+              placeholder="零件描述，最长200字"
+              maxlength="200"
+            />
+          </el-form-item>
+        </div>
+
+        <div class="subBox address">
+          <el-form-item>
+            <el-button @click="goBack()">
+              取消
+            </el-button>
+            <el-button type="primary" @click="submitForm('ruleForm')">
+              保存
+            </el-button>
+            <el-button v-if="actionType == 'add'" type="primary" class="continue" @click="submitForm('ruleForm','goAnd')">
+              保存并继续订购零件
+            </el-button>
+          </el-form-item>
+          </div>
+      </el-form>
+    </div>
+  </div>
+    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="../../plugins/vue/vue.js"></script>
+    <!-- 引入组件库 -->
+    <script src="../../plugins/element-ui/index.js"></script>
+    <!-- 引入axios -->
+    <script src="../../plugins/axios/axios.min.js"></script>
+    <script src="../../js/request.js"></script>
+    <script src="../../js/validate.js"></script>
+    <script src="../../js/index.js"></script>
+    <script src="../../api/parts.js"></script>
+    <script>
+      new Vue({
+        el: '#part-add-app',
+        data() {
+          return {
+            id: '',
+            restKey: 0,
+            textarea: '',
+            value: '',
+            imageUrl: '',
+            actionType: '',
+            partList: [],
+            partAftersData: [],
+            partAfters: [],
+            vueRest : '1',
+            index : 0,
+            inputStyle  : {'flex':1},
+            ruleForm  : {
+              'name': '',
+              'id': '',
+              'price': '',
+              'code': '',
+              'image': '',
+              'description': '',
+              'partAfters': [],
+              'status': true,
+              categoryId: ''
+            },
+            mak: false
+          }
+        },
+        computed: {
+          rules () {
+            return {
+              'name': [
+                {'required': true, 'message': '请填写零件名称', 'trigger': 'blur'}
+              ],
+              'categoryId': [
+                {'required': true, 'message': '请选择零件分类', 'trigger': 'change'}
+              ],
+              'price': [
+                {
+                  'required': true,
+
+                  validator: (rules, value, callback) => {
+                    if (!value) {
+                      callback(new Error('请填写零件价格'))
+                    } else {
+                      const reg = /^\d+(\.\d{0,2})?$/
+                      if (reg.test(value)) {
+                        if(value < 10000){
+                          callback()
+                        }else{
+                          callback(new Error('零件价格小于10000'))
+                        }
+                      } else {
+                        callback(new Error('零件价格格式只能为数字,且最多保留两位小数'))
+                      }
+                    }
+                  },
+                  'trigger': 'blur'
+                }
+              ],
+            }
+          }
+        },
+        created() {
+          this.getPartList()
+          // 服务临时数据
+          this.getAfterListHand()
+          this.id = requestUrlParam('id')
+          this.actionType = this.id ? 'edit' : 'add'
+          if (this.id) {
+            this.init()
+          }
+        },
+        mounted() {
+        },
+        methods: {
+          async init () {
+            queryPartById(this.id).then(res => {
+              console.log(res)
+              if (String(res.code) === '1') {
+                this.ruleForm = { ...res.data }
+                this.ruleForm.price = String(res.data.price/100)
+                this.ruleForm.status = res.data.status == '1'
+                this.partAfters = res.data.afters && res.data.afters.map(obj => ({ ...obj, value: JSON.parse(obj.value),showOption: false }))
+                console.log('this.partAfters',this.partAfters)
+                // this.ruleForm.id = res.data.data.categoryId
+                // this.imageUrl = res.data.data.image
+                this.imageUrl = `/common/download?name=${res.data.image}`
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            })
+          },
+          // 按钮 - 添加服务
+          addAfter () {
+            this.partAfters.push({'name': '', 'value': [], showOption: false}) // JSON.parse(JSON.stringify(this.partAftersData))
+          },
+
+          // 按钮 - 删除口味
+          delAfter (ind) {
+            this.partAfters.splice(ind, 1)
+          },
+
+          // 按钮 - 删除口味标签
+          delAfterLabel (index, ind) {
+            this.partAfters[index].value.splice(ind, 1)
+          },
+
+          //口味位置记录
+          afterPosition (index) {
+            this.index = index
+          },
+
+          // 添加口味标签
+          keyDownHandle (val,index) {
+            console.log('keyDownHandle----val',val)
+            console.log('keyDownHandle----index',index)
+            console.log('keyDownHandle----this.partAfters',this.partAfters)
+            if (event) {
+              event.cancelBubble = true
+              event.preventDefault()
+              event.stopPropagation()
+            }
+
+            if (val.target.innerText.trim() != '') {
+              this.partAfters[index].value.push(val.target.innerText)
+              val.target.innerText = ''
+            }
+          },
+
+          // 获取零件分类
+          getPartList () {
+            getCategoryList({ 'type': 1 }).then(res => {
+              if (res.code === 1) {
+                this.partList = res.data
+              } else {
+                this.$message.error(res.msg || '操作失败')
+              }
+            })
+          },
+
+          // 获取服务列表
+          getAfterListHand () {
+            // flavor flavorData
+            this.partAftersData = [
+              {'name':'延长保修','value':['一年','三年','五年','终身']},
+              {'name':'全保换新','value':['一年','两年','三年']},
+              {'name':'上门服务','value':['上门急速安装','电脑上门检修']},
+              {'name':'超值换新','value':['两年免费换新','三年升级换新']}
+            ]
+          },
+
+          selectAfter(st,index){
+            console.log('st',st)
+            console.log('index',index)
+            console.log('this.partAfters',this.partAfters)
+            const obj = JSON.parse(JSON.stringify(this.partAfters[index]))
+            obj.showOption = st
+            this.partAfters.splice(index,1,obj)
+            // this.partAfters[index].showOption = st
+          },
+
+          outSelect(st,index){
+            const _this = this
+            setTimeout(()=> {
+              const obj = JSON.parse(JSON.stringify(_this.partAfters[index]))
+              obj.showOption = st
+              _this.partAfters.splice(index,1,obj)
+            }, 200)
+          },
+
+          inputHandle(val,index){
+            // this.selectFlavor(false,index)
+          },
+
+          checkOption(val, ind, index){
+            this.selectHandle(val.name, index, ind)
+            this.partAfters[index].name = val.name
+          },
+
+          selectHandle(val, key, ind){
+            const arrDate = [...this.partAfters]
+            arrDate[key] = JSON.parse(JSON.stringify(this.partAftersData[ind]))
+            this.partAfters = arrDate
+          },
+          //提交保存
+          submitForm(formName, st) {
+            this.$refs[formName].validate((valid) => {
+              if (valid) {
+                let params = {...this.ruleForm}
+                // params.afters = this.partAfters
+                params.status = this.ruleForm ? 1 : 0
+                params.price *= 100
+                params.categoryId = this.ruleForm.categoryId
+
+                params.afters = this.partAfters.map(obj => ({ ...obj, value: JSON.stringify(obj.value) }))
+                delete params.partAfters
+                if(!this.imageUrl){
+                  this.$message.error('请上传零件图片')
+                  return 
+                }
+                if (this.actionType == 'add') {
+                  delete params.id
+                  addPart(params).then(res => {
+                    if (res.code === 1) {
+                      this.$message.success('零件订购成功！')
+                      if (!st) {
+                        this.goBack()
+                      } else {
+                        this.partAfters = []
+                        // this.partAftersData = []
+                        this.imageUrl = ''
+                        this.ruleForm = {
+                          'name': '',
+                          'id': '',
+                          'price': '',
+                          'code': '',
+                          'image': '',
+                          'description': '',
+                          'partAfters': [],
+                          'status': true,
+                          categoryId: ''
+                        }
+                      }
+                    } else {
+                      this.$message.error(res.msg || '操作失败')
+                    }
+                  }).catch(err => {
+                    this.$message.error('请求出错了：' + err)
+                  })
+                } else {
+                  delete params.updateTime
+                  editPart(params).then(res => {
+                    if (res.code === 1) {
+                      this.$message.success('零件修改成功！')
+                      this.goBack()
+                    } else {
+                      this.$message.error(res.msg || '操作失败')
+                    }
+                  }).catch(err => {
+                    this.$message.error('请求出错了：' + err)
+                  })
+                }
+              } else {
+                return false
+              }
+            })
+          },
+
+          handleAvatarSuccess (response, file, fileList) {
+            // 拼接down接口预览
+            if(response.code === 0 && response.msg === '未登录'){
+              window.top.location.href = '/backend/page/login/login.html'
+            }else{
+              this.imageUrl = `/common/download?name=${response.data}`
+              this.ruleForm.image = response.data
+            }
+          },
+
+          onChange (file) {
+            if(file){
+              const suffix = file.name.split('.')[1]
+              const size = file.size / 1024 / 1024 < 2
+              if(['png','jpeg','jpg'].indexOf(suffix) < 0){
+                this.$message.error('上传图片只支持 png、jpeg、jpg 格式！')
+                this.$refs.upload.clearFiles()
+                return false
+              }
+              if(!size){
+                this.$message.error('上传文件大小不能超过 2MB!')
+                return false
+              }
+              return file
+            }
+          },
+          
+          goBack(){
+            window.parent.menuHandle({
+              id: '3',
+              url: '/backend/page/parts/list.html',
+              name: '零件管理'
+            },false)
+          }
+        }
+      })
+    </script>
+</body>
+</html>
